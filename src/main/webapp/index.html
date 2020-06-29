@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang = "de"> 
+	<head> 
+		<meta charset = "utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title data-i18n="title">Medienstream-Vermittler</title> 
+		<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+		<script defer src="controller.js"></script>
+		<style>
+			* { font-family: Helvetica, sans; }
+			html {
+				scroll-behavior: smooth;
+			}
+			#header {
+				position: fixed;
+				left: 0;
+				top: 0;
+				right: 0;
+				background-color: #f0f0f0;
+				border-bottom: solid 1px #808080;
+				padding-right: 40px;
+				padding-left: .5em;
+			}
+			#menu {
+				display: inline-block;
+				cursor: pointer;
+				position: fixed;
+				right: 2em;
+				top: 3ex;
+				padding: .5ex .5em;
+				background: white;
+				z-index: 9;
+			}
+			#menu div {
+				width: 32px;
+				height: 3px;
+				background-color: black;
+				margin: 6px 0;
+			}
+			div.outerRim {
+				opacity: 0.0;
+				transition-duration: 0.3s;
+				transition-property: opacity;
+			}
+			#menuContent {
+				position: fixed;
+				top: 100px;
+				right: 0;
+				width: 15em;
+				overflow: hidden;
+				background: #f0f0f0;
+				border: 1px solid #444;
+				transition: 0.3s;
+				z-index: 9;
+			}
+			#menuContent ul {
+				list-style-type: none;
+				margin: 0;
+				padding: 0;
+			}
+			#menuContent ul li {
+				padding: 5pt;
+			}
+			#menuContent ul li:hover {
+				background: #ccc;
+			}
+			#menuContent ul li a {
+				text-decoration: none;
+				color: #000;
+			}
+			#menuContent ul li a:hover {
+				color: #444;
+			}
+			.trenner:hover {
+				background: #f0f0f0;
+			}
+			#menuContent ul li.trenner {
+				height: 1px;
+				border-top: solid 1px #444;
+				margin-top: .5ex;
+				margin-bottom: .5ex;
+				padding: 0;
+			}
+			#content {
+				margin-top: 150px;
+				padding-top: .25ex;
+			}
+			button {
+				margin: 2.5px;
+				padding: 2.5px;
+				height: 30px;
+				border-radius: 7.5px;
+				background-color: #081e80;
+				color: #ffffff;
+			}
+			input { font-family: monospace; }
+			figure {
+				width: fit-content(320px);
+				float: left; display: block;
+				border: 1px solid #808080; background: #f0f0f0;
+				z-index: 4;
+			}
+			video { border: 1px solid #808080; width: 320px; max-width: 100%; height: auto; }
+			figure textarea {
+				display: block;
+				box-sizing: border-box;
+				width: 95%;
+			}
+			figure .videoMessage {
+				position: relative;
+				top: -120px;
+				left: 20px;
+			}
+			figure .videoMessage div {
+				display: none;
+				padding: .2ex .5em;
+				color: white;
+				background: black;
+				opacity:0.8;
+				z-index: 8;
+			}
+			figure[data-boxType="3"] div.videoBoxName {
+				display: none;
+			}
+			figure[data-boxType="3"] div.videoBoxButtons button[data-state='connect'] {
+				display: none;
+			}
+			figure[data-boxType="3"] div.videoBoxButtons button[data-state='hangup'] {
+				display: none;
+			}
+			@media (max-width: 640px) {
+				h1 { font-size: 10pt; }
+				#menu {
+					right: 1em;
+					top: 1ex;
+					padding: 5px;
+				}
+				#menuContent {
+					width: 0;
+				}
+				div.outerRim {
+					opacity: 1.0;
+				}
+				#controlsDisplay {
+					display: none;
+				}
+				figure {
+					width: fit-content(95%);
+					border: 1pt solid blue; 
+					padding-left:0;
+					padding-right:0;
+				}
+				video {
+					width: 160px;
+				}
+				.controls input {
+				 		margin: 1px 0;
+				}
+				.controls {
+					flex-direction: column;
+					align-items: stretch;
+				}
+			}
+			.controls {
+				display:flex;
+				flex-flow: row wrap;
+				flex-wrap: wrap;
+				align-items: center;
+			}
+			.controls label {
+				margin: 1px 3px 1px 0; 
+			}
+			.controls input {
+				vertical-align: middle;
+				margin: 1px 5px 1px 0;
+			}
+			.controls > * {
+				float:left;
+				display:block;
+			}
+			.controls > *:first-child {
+				margin-left:0;
+			}
+			.controls button:hover, .controls button:focus { opacity:0.5; }
+			.controls button.svg {
+				text-align:center;
+				overflow:hidden;
+				white-space:nowrap;
+				text-overflow:ellipsis;
+				border:none;
+				cursor:pointer;
+				text-indent:-99999px;
+				background:transparent;
+				background-size:contain;
+				background-repeat:no-repeat;
+			}
+			.controls button[data-state="connect"] {
+				width: 80px;
+				height: 30px;
+				/* I tried html escaped utf-8 instead of base64, but my browser wasn't happy about it and didn't tell the reason. */
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDE2LjkzMzMzMyA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSI2NCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMDg3MzI4OCIgeT0iMjkxLjI4Nzg3IiB4PSIwLjYzNzg5OTQ2IiBoZWlnaHQ9IjUuMDc0MjAxMSIgd2lkdGg9IjE1LjY1NzUzNSIgaWQ9ImJhc2VyZWN0IiBzdHlsZT0ib3BhY2l0eToxO2ZpbGw6IzA4MWU4MDtmaWxsLW9wYWNpdHk6MTtzdHJva2U6IzA4MWU1MDtzdHJva2Utd2lkdGg6MC4yMTc0NjU3NDtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjA7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiLz48dGV4dCB0cmFuc2Zvcm09InNjYWxlKDAuOTY1MzQ4MzQsMS4wMzU4OTU1KSIgaWQ9InRleHQ4NDc1IiB5PSIyODQuODcyNzEiIHg9IjEuNzI4OTQxIiBzdHlsZT0iZm9udC1zdHlsZTpub3JtYWw7Zm9udC13ZWlnaHQ6bm9ybWFsO2ZvbnQtc2l6ZTozLjM3Njk1MzZweDtsaW5lLWhlaWdodDoxMjUlO2ZvbnQtZmFtaWx5OidCaXRzdHJlYW0gVmVyYSBTYW5zJztsZXR0ZXItc3BhY2luZzowcHg7d29yZC1zcGFjaW5nOjBweDtmaWxsOiNmZmZmZmY7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOm5vbmU7c3Ryb2tlLXdpZHRoOjAuMDg0NDIzODRweDtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2Utb3BhY2l0eToxIiB4bWw6c3BhY2U9InByZXNlcnZlIj48dHNwYW4gc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MC4wODQ0MjM4NHB4IiB5PSIyODQuODcyNzEiIHg9IjEuNzI4OTQxIiBpZD0idHNwYW44NDczIj5Db25uZWN0PC90c3Bhbj48L3RleHQ+PC9nPjwvc3ZnPgo=');
+			}
+			.controls button[data-state="hangup"] {
+				width: 80px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDE2LjkzMzMzMyA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSI2NCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMDg3MzI4OCIgeT0iMjkxLjI4Nzg3IiB4PSIwLjYzNzg5OTQ2IiBoZWlnaHQ9IjUuMDc0MjAxMSIgd2lkdGg9IjE1LjY1NzUzNSIgaWQ9ImJhc2VyZWN0IiBzdHlsZT0ib3BhY2l0eToxO2ZpbGw6IzA4MWU4MDtmaWxsLW9wYWNpdHk6MTtzdHJva2U6IzA4MWU1MDtzdHJva2Utd2lkdGg6MC4yMTc0NjU3NDtzdHJva2UtbGluZWNhcDpzcXVhcmU7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjA7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiLz48dGV4dCB0cmFuc2Zvcm09InNjYWxlKDAuOTY1MzQ4MzQsMS4wMzU4OTU1KSIgaWQ9InRleHQ4NDc1IiB5PSIyODQuODcyNzEiIHg9IjIuMTA0ODkwOCIgc3R5bGU9ImZvbnQtc3R5bGU6bm9ybWFsO2ZvbnQtd2VpZ2h0Om5vcm1hbDtmb250LXNpemU6My4zNzY5NTM2cHg7bGluZS1oZWlnaHQ6MTI1JTtmb250LWZhbWlseTonQml0c3RyZWFtIFZlcmEgU2Fucyc7bGV0dGVyLXNwYWNpbmc6MHB4O3dvcmQtc3BhY2luZzowcHg7ZmlsbDojZmZmZmZmO2ZpbGwtb3BhY2l0eToxO3N0cm9rZTpub25lO3N0cm9rZS13aWR0aDowLjA4NDQyMzg0cHg7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW9wYWNpdHk6MSIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+PHRzcGFuIHN0eWxlPSJmaWxsOiNmZmZmZmY7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlLXdpZHRoOjAuMDg0NDIzODRweCIgeT0iMjg0Ljg3MjcxIiB4PSIyLjEwNDg5MDgiIGlkPSJ0c3Bhbjg0NzMiPkhhbmd1cDwvdHNwYW4+PC90ZXh0PjwvZz48L3N2Zz4K');
+			}
+			.controls button[data-state="muteAudio"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4MTkiIGQ9Ik0gMi41MTM1NDE3LDI5NS45NDE2NiBIIDMuODM2NDU4NCIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDgyMSIgZD0ibSAzLjE3NSwyOTUuOTQxNjYgdiAtMC43OTM3NSIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBkPSJNIDQuOTk4MTQzMywyOTMuNTg5MTUgQSAxLjgzNzkwOTMsMS42OTExMzQ1IDAgMCAxIDMuMTQ0MTA2NiwyOTUuMjM3MyAxLjgzNzkwOTMsMS42OTExMzQ1IDAgMCAxIDEuMzIyOTY0MSwyOTMuNTU4MzkiIGlkPSJwYXRoODIzIiBzdHlsZT0ib3BhY2l0eToxO2ZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MTtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHJlY3Qgcnk9IjEuMDU4MzMzNCIgeT0iMjkxLjcwODMxIiB4PSIyLjExNjY2NjgiIGhlaWdodD0iMi45MTA0MTY4IiB3aWR0aD0iMi4xMTY2NjY4IiBpZD0icmVjdDg0MCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOm5vbmU7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzQ7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODUxLTMiIGQ9Ik0gNC41ODU5MzI4LDI5NS4yMzU2IDEuNzY0MDY3MywyOTIuNDAyMTYiIHN0eWxlPSJmaWxsOiNmZmZmZmY7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiMwODFlODA7c3Ryb2tlLXdpZHRoOjAuNDk5ODYwMzg7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODUxIiBkPSJNIDQuNjg0NzAxOCwyOTUuMzExNDcgMS42OTEyNzg0LDI5Mi4zMTgwNCIgc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yOTM1MjkzOTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PC9nPjwvc3ZnPgo=');
+			}
+			.controls button[data-state="muteVideo"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHJlY3Qgcng9IjAuMjY0NTgzNTMiIHJ5PSIwLjI2NDU4MzUzIiB5PSIyOTMuMDMxMjUiIHg9IjEuMzIyOTE2NiIgaGVpZ2h0PSIxLjg1MjA4MzMiIHdpZHRoPSIyLjY0NTgzMzUiIGlkPSJyZWN0ODgwIiBzdHlsZT0ib3BhY2l0eToxO2ZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MTtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4ODYiIGQ9Im0gNS4xNTkzNzUxLDI5My4zMTA5MSAtMC43ODc4MTYxLDAuMjU4NTUgdiAwLjc3NTYzIGwgMC43ODc4MTYxLDAuMjU4NTQgeiIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLW9wYWNpdHk6MTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NTEtMyIgZD0iTSA0LjU4NTkzMjgsMjk1LjIzNTYgMS43NjQwNjczLDI5Mi40MDIxNiIgc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6IzA4MWU4MDtzdHJva2Utd2lkdGg6MC40OTk4NjAzODtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NTEiIGQ9Ik0gNC42ODQ3MDE4LDI5NS4zMTE0NyAxLjY5MTI3ODQsMjkyLjMxODA0IiBzdHlsZT0iZmlsbDojZmZmZmZmO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTojZmZmZmZmO3N0cm9rZS13aWR0aDowLjI5MzUyOTM5O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjQ7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiLz48L2c+PC9zdmc+Cg==');
+			}
+			.controls button[data-state="move"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NDkiIGQ9Ik0gMS4wNTgzMzMzLDI5My44MDQ1MiBIIDUuMjkxNjY2NyIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4zMDU1MTQ1NztzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NTEiIGQ9Im0gMy4xODk0NzMxLDI5NS45NDE2NiB2IC00LjIzMzM0IiBzdHlsZT0iZmlsbDojZmZmZmZmO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTojZmZmZmZmO3N0cm9rZS13aWR0aDowLjI5MzUyOTM5O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOnJvdW5kO3N0cm9rZS1taXRlcmxpbWl0OjQ7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDgxOCIgZD0ibSAyLjUyODAxNDgsMjkyLjQ4Nzg5IDAuNjYxNDU4MywtMC43Nzk1NyAwLjY2MTQ1ODQsMC43Nzk1NyIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDgxOC0zIiBkPSJtIDMuODUwOTIzMSwyOTUuMTYyMDkgLTAuNjYxNDUsMC43Nzk1NyAtMC42NjE0NiwtMC43Nzk1NyIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDgxOC0zLTYiIGQ9Im0gNC41MTIwOTY3LDI5My4xNDMwNyAwLjc3OTU3LDAuNjYxNDUgLTAuNzc5NTcsMC42NjE0NiIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDgxOC0zLTYtNyIgZD0ibSAxLjgzNzkwMzMsMjk0LjQ2NTk3IC0wLjc3OTU3LC0wLjY2MTQ1IDAuNzc5NTcsLTAuNjYxNDYiIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzVweDtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2Utb3BhY2l0eToxIi8+PC9nPjwvc3ZnPgo=');
+			}
+			.controls button[data-state="layerUp"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NDkiIGQ9Ik0gMi4zODEyNSwyOTMuMzAxNDYgSCA1LjI5MTY2NjciIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzQ7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODUxIiBkPSJtIDEuNTg3NSwyOTUuOTQxNjYgdiAtNC4yMzMzNCIgc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yOTM1MjkzOTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4MTgiIGQ9Ik0gMC45MjYwNDE3MSwyOTIuNDg3ODkgMS41ODc1LDI5MS43MDgzMiBsIDAuNjYxNDU4NCwwLjc3OTU3IiBzdHlsZT0iZmlsbDpub25lO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTojZmZmZmZmO3N0cm9rZS13aWR0aDowLjI2NDU4MzM1cHg7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODQ5LTMiIGQ9Ik0gMi4zODEyNSwyOTQuMDg5NTcgSCA0LjIzMzMzMzMiIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzU7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODQ5LTMtNiIgZD0iTSAyLjM4MTI1LDI5NC44ODMzMiBIIDQuMjMzMzMzNCIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PC9nPjwvc3ZnPgo=');
+			}
+			.controls button[data-state="layerDown"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NDkiIGQ9Ik0gMi4zODEyNSwyOTQuODgzMzIgSCA1LjI5MTY2NjciIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzU7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODUxIiBkPSJtIDEuNTg3NSwyOTUuOTQxNjYgdiAtNC4yMzMzNCIgc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yOTM1MjkzOTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4MTgiIGQ9Ik0gMi4yNDg5NSwyOTUuMTYyMDkgMS41ODc1LDI5NS45NDE2NiAwLjkyNjA0MDAxLDI5NS4xNjIwOSIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDg0OS0zIiBkPSJNIDIuMzgxMjUsMjk0LjA4OTU3IEggNC4yMzMzMzMzIiBzdHlsZT0iZmlsbDpub25lO2ZpbGwtcnVsZTpldmVub2RkO3N0cm9rZTojZmZmZmZmO3N0cm9rZS13aWR0aDowLjI2NDU4MzM1O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1taXRlcmxpbWl0OjQ7c3Ryb2tlLWRhc2hhcnJheTpub25lO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDg0OS0zLTYiIGQ9Ik0gMi4zODEyNSwyOTMuMjk1ODIgSCA0LjIzMzMzMzQiIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzU7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjwvZz48L3N2Zz4K');
+			}
+			.controls button[data-state="zoomIn"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PGNpcmNsZSByPSIxLjI0MDIzNDQiIGN5PSIyOTMuMDMxMjUiIGN4PSIyLjY0NTgzMzMiIGlkPSJwYXRoMzMiIHN0eWxlPSJvcGFjaXR5OjE7ZmlsbDpub25lO2ZpbGwtb3BhY2l0eToxO3N0cm9rZTojZmZmZmZmO3N0cm9rZS13aWR0aDowLjI2NDU4MzM0O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODQ3IiBkPSJtIDMuMzMwOTE1MywyOTQuMDIzNDMgMS4xNTc1NTIyLDEuNjc3MjciIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzVweDtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NDkiIGQ9Im0gMS44NTIwODM0LDI5My4wMzEyNCBoIDEuNTg3NSIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48cGF0aCBpZD0icGF0aDg1MSIgZD0ibSAyLjY0NTgzMzQsMjkzLjgyNDk5IHYgLTEuNTg3NSIgc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48L2c+PC9zdmc+Cg==');
+			}
+			.controls button[data-state="zoomOut"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PGNpcmNsZSByPSIxLjI0MDIzNDQiIGN5PSIyOTMuMDMxMjUiIGN4PSIyLjY0NTgzMzMiIGlkPSJwYXRoMzMiIHN0eWxlPSJvcGFjaXR5OjE7ZmlsbDpub25lO2ZpbGwtb3BhY2l0eToxO3N0cm9rZTojZmZmZmZmO3N0cm9rZS13aWR0aDowLjI2NDU4MzM0O3N0cm9rZS1saW5lY2FwOnNxdWFyZTtzdHJva2UtbGluZWpvaW46cm91bmQ7c3Ryb2tlLW1pdGVybGltaXQ6MDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODQ3IiBkPSJtIDMuMzMwOTE1MywyOTQuMDIzNDMgMS4xNTc1NTIyLDEuNjc3MjciIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMjY0NTgzMzVweDtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjptaXRlcjtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NDkiIGQ9Im0gMS44NTIwODM0LDI5My4wMzEyNCBoIDEuNTg3NSIgc3R5bGU9ImZpbGw6bm9uZTtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yNjQ1ODMzNXB4O3N0cm9rZS1saW5lY2FwOmJ1dHQ7c3Ryb2tlLWxpbmVqb2luOm1pdGVyO3N0cm9rZS1vcGFjaXR5OjEiLz48L2c+PC9zdmc+Cg==');
+			}
+			.controls button[data-state="exit"] {
+				width: 30px;
+				height: 30px;
+				background-image: url('data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjxzdmcgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpjYz0iaHR0cDovL2NyZWF0aXZlY29tbW9ucy5vcmcvbnMjIiB4bWxuczpyZGY9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkvMDIvMjItcmRmLXN5bnRheC1ucyMiIHhtbG5zOnN2Zz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgaWQ9InN2ZzgiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDYuMzQ5OTk5OSA2LjM1MDAwMDIiIGhlaWdodD0iMjQiIHdpZHRoPSIyNCI+PGRlZnMgaWQ9ImRlZnMyIi8+PG1ldGFkYXRhIGlkPSJtZXRhZGF0YTUiPjxyZGY6UkRGPjxjYzpXb3JrIHJkZjphYm91dD0iIj48ZGM6Zm9ybWF0PmltYWdlL3N2Zyt4bWw8L2RjOmZvcm1hdD48ZGM6dHlwZSByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIi8+PGRjOnRpdGxlLz48L2NjOldvcms+PC9yZGY6UkRGPjwvbWV0YWRhdGE+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCwtMjkwLjY0OTk5KSIgaWQ9ImxheWVyMSI+PHJlY3Qgcnk9IjEuMTA2OTIyNSIgeT0iMjkxLjI0MjE2IiB4PSIwLjU5MjE4MDkxIiBoZWlnaHQ9IjUuMTY1NjM4IiB3aWR0aD0iNS4xNjU2MzgiIGlkPSJiYXNlcmVjdCIgc3R5bGU9Im9wYWNpdHk6MTtmaWxsOiMwODFlODA7ZmlsbC1vcGFjaXR5OjE7c3Ryb2tlOiMwODFlNTA7c3Ryb2tlLXdpZHRoOjAuMTI2MDI4NjY7c3Ryb2tlLWxpbmVjYXA6c3F1YXJlO3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDowO3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PHBhdGggaWQ9InBhdGg4NDkiIGQ9Im0gMS42NjM4MTYxLDI5NS4zMDcyMiAyLjk5MzQxODgsLTIuOTkzNDEiIHN0eWxlPSJmaWxsOm5vbmU7ZmlsbC1ydWxlOmV2ZW5vZGQ7c3Ryb2tlOiNmZmZmZmY7c3Ryb2tlLXdpZHRoOjAuMzA1NTE0NTc7c3Ryb2tlLWxpbmVjYXA6YnV0dDtzdHJva2UtbGluZWpvaW46bWl0ZXI7c3Ryb2tlLW1pdGVybGltaXQ6NDtzdHJva2UtZGFzaGFycmF5Om5vbmU7c3Ryb2tlLW9wYWNpdHk6MSIvPjxwYXRoIGlkPSJwYXRoODUxIiBkPSJNIDQuNjgxOTQ1NywyOTUuMzExNDcgMS42ODg1MjIzLDI5Mi4zMTgwNCIgc3R5bGU9ImZpbGw6I2ZmZmZmZjtmaWxsLXJ1bGU6ZXZlbm9kZDtzdHJva2U6I2ZmZmZmZjtzdHJva2Utd2lkdGg6MC4yOTM1MjkzOTtzdHJva2UtbGluZWNhcDpidXR0O3N0cm9rZS1saW5lam9pbjpyb3VuZDtzdHJva2UtbWl0ZXJsaW1pdDo0O3N0cm9rZS1kYXNoYXJyYXk6bm9uZTtzdHJva2Utb3BhY2l0eToxIi8+PC9nPjwvc3ZnPgo=');
+			}
+			.figure-hidden {
+				background: none;
+			}
+			.controls-hidden {
+				display: none;
+			}
+			#statistics {
+				float: left;
+				width: 100%;
+			}
+			#dokumentation {
+				margin-top: 100%;
+			}
+			#impressum {
+				margin-top: 5ex;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="header">
+			<h1 data-i18n="h1.title">Medienstream-Vermittler AB32</h1>
+			<p class="message"><span data-i18n="status">Status</span>: <span id="message" data-i18n="message.first">Erst anmelden, dann verbinden.</span></p>
+			<div id="menu">
+				<div class="outerRim"></div>
+				<div></div>
+				<div class="outerRim"></div>
+			</div>
+		</div>
+		<div id="menuContent">
+			<ul>
+				<li><a href="javascript:stopAllStreams();" data-i18n="menu.end_all_streams;[title]menu.end_all_streams.tooltip" title="Beendet alle Streams und die WebSocket-Verbindung zum Server.">Alle Streams beenden</a></li>
+				<li><a href="javascript:addNewPeer();" data-i18n="menu.add_peer;[title]menu.add_peer.tooltip" title="Ergänzt ein Fenster zum Anfragen eines weiteren Teilnehmers.">Weiterer Teilnehmer</a></li>
+				<li><a href="javascript:createVideoBox(BOX_TYPE_VIDEO, BOX_LOCAL, null, null, null);" title="Öffnet ein Videofenster zu einer eigenen Kamera." data-i18n="menu.videobox_local;[title]menu.videobox_local.tooltip">Eigenes Videofenster</a></li>
+				<li><a href="javascript:createVideoBox(BOX_TYPE_SCREEN, BOX_LOCAL, null, null, null);" title="Öffnet ein Fenster zum Teilen eines eigenen Fensters oder des ganzen Bildschirms." data-i18n="menu.share_screen;[title]menu.share_screen.tooltip">Eigenes Fenster teilen</a></li>
+				<li><a href="javascript:createVideoBox(BOX_TYPE_CHAT, BOX_LOCAL, null, null, null);" title="Öffnet ein Fenster zum Teilen eines Textchats." data-i18n="menu.textchat;[title]menu.textchat.tooltip">Textchat</a></li>
+				<li><a href="javascript:createVideoBox(BOX_TYPE_REQUEST, BOX_LOCAL, null, null, null);" title="Öffnet eine Videobox zur reinen Anfrage an einen anderen Teilnehmer, z.B. wenn dieser nur ein eigenes Fenster teilen möchte." data-i18n="menu.requestbox;[title]menu.requestbox.tooltip">Anfragebox</a></li>
+				<li class="trenner"></li>
+				<li><a href="javascript:i18n.request('de');" title="Wechselt zur deutschen Sprache" data-i18n="menu.lang_de">de (deutsch)</a></li>
+				<li><a href="javascript:i18n.request('en');" title="Switches to english language" data-i18n="menu.lang_en">en (englisch)</a></li>
+				<li><a href="javascript:layout.toggleButtonVisibility();" title="Blendet die Buttons unter den Video-Boxen ein oder aus." data-i18n="menu.toggle_button_visibility">Buttonsichtbarkeit</a></li>
+				<li><a href="javascript:layout.autoResize();" title="Videoboxen automatisch vergrößern" data-i18n="menu.auto_layout">Auto-Layout</a></li>
+				<li><a href="javascript:layout.resizeVideoBoxes(0.22);" data-i18n="menu.videoboxes_small">kleine Videofenster</a></li>
+				<li><a href="javascript:layout.resizeVideoBoxes(0.4);" data-i18n="menu.videoboxes_medium">mittlere Videofenster</a></li>
+				<li><a href="javascript:layout.resizeVideoBoxes(0.9);" data-i18n="menu.videoboxes_large">große Videofenster</a></li>
+				<li><a href="javascript:changeConstraints(160, 120);" title="Eigenen Stream auf niedrige Auflösung 160 × 120 setzen." data-i18n="menu.stream160">Stream 160 × 120</a></li>
+				<li><a href="javascript:changeConstraints(320, 240);" title="Eigenen Stream auf mittlere Auflösung 320 × 240 setzen." data-i18n="menu.stream320">Stream 320 × 240</a></li>
+				<li><a href="javascript:changeConstraints(640, 480);" title="Eigenen Stream auf Auflösung 640 × 480 setzen." data-i18n="menu.stream640">Stream 640 × 480</a></li>
+				<li><a href="javascript:messages.showMessages();" title="Anzeige aller bisherigen Meldungen" data-i18n="menu.messages;[title]menu.messages.tooltip">Meldungen</a></li>
+				<li><a href="javascript:showStatistics(false);" title="kurze WebRTC-Statistiken ausgeben bzw. aktualisieren" data-i18n="menu.statistics_short">Statistik (kurz)</a></li>
+				<li><a href="javascript:showStatistics(true);" title="ausführliche WebRTC-Statistiken ausgeben bzw. aktualisieren" data-i18n="menu.statistics_long">Statistik (lang)</a></li>
+				<li class="trenner"></li>
+				<li><a href="#linkDoku" data-i18n="menu.documentation">Dokumentation</a>
+				<li><a href="#linkImpressum" data-i18n="menu.impressum">Impressum</a>
+				<li><a href="#linkDatenschutz" data-i18n="menu.privacy">Datenschutz</a>
+			</ul>
+		</div>
+		<div id="content">
+			<div id="controlsSession" class="controls">
+				<span><label for="sessionId" data-i18n="label.session">Session-Name:</label> 
+				<input type="text" id="sessionId" size="15" maxlength="40" /></span>
+			</div>
+			<div id="controlsDisplay" class="controls">
+				<button id="newPeerBtn" data-state="new-peer" data-i18n="button.addPeer">Weiterer Teilnehmer</button> 
+				<button id="stopVideoBtn" data-state="stop" data-i18n="button.closeAll">Alle Streams beenden</button>
+				<button id="btnStyle1" data-state="style" data-i18n="button.small">klein</button>
+				<button id="btnStyle2" data-state="style" data-i18n="button.medium">mittel</button>
+				<button id="btnStyle3" data-state="style" data-i18n="button.large">groß</button>
+			</div>
+			<div id="videoBoxes">
+			</div>
+		</div>
+		<div id="statistics">
+		</div>
+		<div id="messages">
+		</div>
+		<div id="dokumentation">
+		<h2><a id="linkDoku" data-i18n="h2.documentation">Dokumentation</a></h2>
+		<p data-i18n="p.documentation_doc01">Der <em>Medienstream-Vermittler</em> ist eine Demonstration von <a href="https://de.wikipedia.org/wiki/WebRTC">WebRTC</a>, einem offenen Standard zur Echtzeit-Kommunikation zwischen Rechnern.
+		Damit sind beispielsweise Videokonferenzen zwischen zwei oder auch mehr Teilnehmern möglich.
+		Es wird lediglich ein aktueller Web-Browser benötigt, spezielle Apps oder andere Programme sind nicht dazu erforderlich!
+		Insbesondere läuft die Video- und Audiokommunikation nicht über den Server, sondern direkt, „peer to peer“, zwischen den Teilnehmern.
+		Vorteil ist, dass nach Etablierung der Verbindungen jeweils eine End-to-End-Verschlüsselung vorliegt.
+		Dazu kommt das sogenannte <a href="https://de.wikipedia.org/wiki/Session_Traversal_Utilities_for_NAT">STUN-Protokoll</a> (Session Traversal Utilities for NAT) zum Einsatz.
+		Die beiden beteiligten Browser ermitteln damit ihre IP-Adressen im Internet und schalten die gegenseitige Erreichbarkeit frei.
+		Aus technischen Gründen ist dies jedoch nicht immer möglich:</p>
+		<ul>
+		<li data-i18n="li.documentation_doc02">In großen Firmen wird mit <a href="https://de.wikipedia.org/wiki/Proxy_(Rechnernetz)">Proxies</a> gearbeitet, dieser prüft und filtert die Kommunikation mit dem Internet.</li>
+		<li data-i18n="li.documentation_doc03">Je nachdem, wie der Router oder Provider die Internet-Verbindung handhaben, kann es zu Problemen kommen.</li>
+		</ul>
+		<p data-i18n="p.documentation_doc04">Es gibt <a href="https://blog.addpipe.com/troubleshooting-webrtc-connection-issues/">Webseiten</a>, die dies ausführlich erläutern.
+		Abhilfe würde ein <a href="https://en.wikipedia.org/wiki/Traversal_Using_Relays_around_NAT">TURN-Server</a> schaffen, dann würden die beteiligten Browser nicht direkt miteinander sondern über den TURN-Server miteinander kommunizieren.
+		Das wäre dann aber kein reines Peer-to-Peer mehr.</p>
+		<h3 data-i18n="h3.usage">Handhabung</h3>
+		<p data-i18n="p.documentation_us01">Wichtig ist, dass sich alle auf eine Session einigen. Entweder denkt man sich einen gemeinsamen Namen aus
+		(den andere sich hoffentlich nicht ausdenken!) oder nimmt einen Vorschlag des Servers (denn der ist noch frei!).</p>
+		<p data-i18n="p.documentation_us02">Alle sind gleichberechtigt, es gibt keinen Administrator der Session. Aus Datenschutz-Gründen werden die Teilnehmer einer Session anderen nicht durch bloße Wahl dieser Session angezeigt.
+		Fremde Streams werden nur nach eigener Bestätigung hinzugefügt, dazu wird der Name des „klingelnden“ Teilnehmers angezeigt.
+		</p>
+		<p data-i18n="p.documentation_us03">Bei Bedarf kann ein Chat-Fenster eingeblendet werden, die Nachrichten dort werden ebenfalls peer-to-peer übertragen, also insbesondere nicht über diesen Server.
+		Die in Unicode vorhandenen Emoticons (z.B. <a href="https://de.wikipedia.org/wiki/Unicodeblock_Smileys">Smileys</a> und <a href="https://de.wikipedia.org/wiki/Unicodeblock_Verschiedene_Symbole">andere Symbole</a>) können verwendet werden.</p>
+		<h3 data-i18n="h3.motivation">Motivation</h3>
+		<p data-i18n="p.documentation_mot01">Angaben zur Motivation 1</p>
+		<p data-i18n="p.documentation_mot02">Angaben zur Motivation 2</p>
+
+		<h3 data-i18n="h3.changelog">Changelog</h3>
+		<ul>
+		<li data-i18n="li.documentation_ch01">30.05.2020, 0.2.1: Rudimentäre Unterstützung des Teilens eines eigenen Fensters oder Bildschirms.</li>
+		<li data-i18n="li.documentation_ch02">01.06.2020, 0.2.7: Das Teilen von Fenstern funktioniert nun besser.</li>
+		<li data-i18n="li.documentation_ch03">07.06.2020, 0.2.9: Erste Fassung eines ergänzenden Text-Chats (ebenfalls peer-to-peer)</li>
+		<li data-i18n="li.documentation_ch04">15.06.2020, 0.2.14: Automatisches Anordnen der Fenster</li>
+		<li data-i18n="li.documentation_ch05">22.06.2020, 0.2.19: Wahl zwischen deutsch und englisch.</li>
+		</ul>
+		<h3 data-i18n="h3.implementation">Technik und Verfügbarkeit</h3>
+		<p data-i18n="p.documentation_impl01">Angaben zum Server 1</p>
+		<p data-i18n="p.documentation_impl02">Angaben zum Server 2</p>
+		</div>
+		
+		<div id="datenschutz">
+		<h2><a id="linkDatenschutz" data-i18n="h2.privacy">Datenschutz</a></h2>
+		<p data-i18n="p.privacy01">Angaben zum Datenschutz
+		</p>
+		</div>
+
+		<div id="impressum">
+		<h2><a id="linkImpressum" data-i18n="h2.imprint">Impressum</a></h2>
+		<p data-i18n="p.imprint01">Impressum</p>
+		<h3 data-i18n="h3.owner">Seitenbetreiber</h3>
+		<p data-i18n="p.import_contact">Ansprechpartner</p>
+		<address style="padding-left: 4em;">Adresse</address>
+		<p data-i18n="p.imprint_email_preferred">E-Mail wird bevorzugt!</p> 
+		</div>
+	</body>
+</html>
